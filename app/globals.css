@@ -1,0 +1,74 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply bg-slate-50 text-slate-900;
+  font-family: 'Noto Sans JP', 'Hiragino Sans', 'Yu Gothic UI', 'Yu Gothic', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.bg-radial {
+  background:
+    radial-gradient(circle at top, rgba(204, 251, 241, 0.8), transparent 32%),
+    linear-gradient(180deg, #f8fafc 0%, #eef6f7 100%);
+}
+
+.rx-paper {
+  background-image:
+    linear-gradient(to bottom, rgba(148, 163, 184, 0.14) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(203, 213, 225, 0.14) 1px, transparent 1px);
+  background-size: 100% 2.1rem, 2.1rem 100%;
+}
+
+.rx-watermark {
+  position: absolute;
+  right: 1rem;
+  top: 1rem;
+  font-size: 7rem;
+  font-weight: 700;
+  color: rgba(8, 145, 178, 0.08);
+  line-height: 1;
+  pointer-events: none;
+}
+
+.stamp::after {
+  content: '承認';
+  position: absolute;
+  right: 1rem;
+  top: 1rem;
+  border: 2px solid rgba(220, 38, 38, 0.75);
+  color: rgba(220, 38, 38, 0.85);
+  border-radius: 999px;
+  padding: 0.35rem 0.8rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  transform: rotate(-11deg);
+}
+
+@media print {
+  body {
+    background: white !important;
+  }
+
+  nav,
+  .print\:hidden {
+    display: none !important;
+  }
+
+  main,
+  .rx-paper {
+    box-shadow: none !important;
+  }
+
+  .rx-paper {
+    border-color: #94a3b8 !important;
+  }
+}
