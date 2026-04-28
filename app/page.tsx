@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import { useMemo } from 'react';
-import { Bar, BarChart, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { ChevronRight, Dumbbell, NotebookPen, Sparkles, PlayCircle } from 'lucide-react';
 import { AppShell } from '@/components/AppShell';
 import { PFCMeter } from '@/components/PFCMeter';
@@ -13,20 +12,12 @@ import { commitmentScore, sumMacros } from '@/lib/pfcCalculator';
 export default function HomePage() {
   const { state, hydrated, todayPrescription, loadDemo, isGeneratingAi, aiError } = useApp();
 
-  const todayLog = state.logs.find((log) => log.date === new Date().toISOString().slice(0, 10));
+  const today = new Date().toISOString().slice(0, 10);
+  const todayLog = state.logs.find((log) => log.date === today);
   const consumed = sumMacros(todayLog?.meals ?? []);
 
-  const weeklyData = useMemo(() => {
-    return [...state.logs]
-      .sort((a, b) => (a.date < b.date ? -1 : 1))
-      .slice(-7)
-      .map((log) => ({
-        date: log.date.slice(5),
-        weight: log.weightKg,
-        protein: sumMacros(log.meals).protein,
-        carbs: sumMacros(log.meals).carbs,
-        fat: sumMacros(log.meals).fat
-      }));
+  const recentLogs = useMemo(() => {
+    return [...state.logs].sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 7);
   }, [state.logs]);
 
   if (!hydrated) {
@@ -73,15 +64,15 @@ export default function HomePage() {
     );
   }
 
-  const commitment = commitmentScore(state.user.targets, consumed, todayLog?.sleepHours ?? 7, Boolean(todayLog?.workouts.length));
+  const commitment = commitmentScore(state.user.targets, consumed, todayLog?.sleepHours ?? 7, Boolean(todayLog?.workouts?.length));
 
   return (
     <AppShell
       title={`ホーム / ${state.user.nickname}さん`}
-      subtitle={`今日の目標は ${state.user.targets.calories}kcal / P ${state.user.targets.protein}g。過去ログを踏まえたOpenAIコメント付きで、夕食と次回トレーニングを一体で提案します。`}
+      subtitle={`今日の目標は ${state.user.targets.calories}kcal / P ${state.user.targets.protein}g。まずは確実に動くことを優先した安全版ホームです。`}
     >
       {isGeneratingAi ? (
-        <div className="mb-4 rounded-3xl border border-cyan-200 bg-cyan-50 px-4 py-3 text-sm text-cyan-800">OpenAIコメントを更新中です。数秒で反映されます。</div>
+        <div className="mb-4 rounded-3xl border border-cyan-200 bg-cyan-50 px-4 py-3 text-sm text-cyan-800">OpenAIコメントをバックグラウンドで更新中です。先に画面は操作できます。</div>
       ) : null}
       {aiError ? (
         <div className="mb-4 rounded-3xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">{aiError}</div>
@@ -134,51 +125,29 @@ export default function HomePage() {
         </section>
       ) : null}
 
-      <section className="mt-6 grid gap-4 lg:grid-cols-2">
-        <div className="rounded-[28px] border border-rx-line/60 bg-white p-5 shadow-sm">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="font-semibold text-slate-900">体重推移</h2>
-            <span className="text-xs text-slate-500">直近7日</span>
-          </div>
-          {weeklyData.length ? (
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={weeklyData}>
-                  <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-                  <YAxis domain={['dataMin - 1', 'dataMax + 1']} tick={{ fontSize: 12 }} />
-                  <Tooltip />
-                  <Line type="monotone" dataKey="weight" stroke="#0891b2" strokeWidth={3} dot={{ r: 4 }} />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          ) : (
-            <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">まだログがないため、グラフは最初の記録後に表示されます。</div>
-          )}
+      <section className="mt-6 rounded-[28px] border border-rx-line/60 bg-white p-6 shadow-sm">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-slate-900">最近の記録</h2>
+          <Link href="/report" className="text-sm font-medium text-rx-cyan">レポートへ</Link>
         </div>
-
-        <div className="rounded-[28px] border border-rx-line/60 bg-white p-5 shadow-sm">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="font-semibold text-slate-900">PFC摂取の推移</h2>
-            <span className="text-xs text-slate-500">直近7日</span>
+        {recentLogs.length ? (
+          <div className="space-y-3">
+            {recentLogs.map((log) => {
+              const macros = sumMacros(log.meals);
+              return (
+                <div key={log.date} className="rounded-2xl bg-slate-50 px-4 py-4 text-sm text-slate-600">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <strong className="text-slate-900">{log.date}</strong>
+                    <span>体重 {log.weightKg ?? '-'}kg / 睡眠 {log.sleepHours}h / 種目 {log.workouts.length}</span>
+                  </div>
+                  <p className="mt-2">摂取: {Math.round(macros.calories)}kcal / P {Math.round(macros.protein)}g / F {Math.round(macros.fat)}g / C {Math.round(macros.carbs)}g</p>
+                </div>
+              );
+            })}
           </div>
-          {weeklyData.length ? (
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={weeklyData}>
-                  <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-                  <YAxis tick={{ fontSize: 12 }} />
-                  <Tooltip />
-                  <Legend />
-                  <Bar dataKey="protein" stackId="a" fill="#0891b2" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="fat" stackId="a" fill="#38bdf8" />
-                  <Bar dataKey="carbs" stackId="a" fill="#99f6e4" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          ) : (
-            <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">食事ログを保存すると、ここにPFC推移が表示されます。</div>
-          )}
-        </div>
+        ) : (
+          <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">まだログがありません。まずは1件入力して動作を確認しましょう。</div>
+        )}
       </section>
 
       <Link href="/log" className="fixed bottom-24 right-4 z-30 inline-flex items-center gap-2 rounded-full bg-rx-cyan px-5 py-4 text-sm font-semibold text-white shadow-lg transition hover:opacity-95 sm:right-8">

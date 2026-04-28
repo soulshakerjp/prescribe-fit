@@ -102,37 +102,43 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const setProfile = async (profile: UserProfile) => {
     setAiError(null);
     let nextState = emptyAppState;
+    let currentPrescription: Prescription | null = null;
+
     setState((prev) => {
       nextState = buildStateAfterProfile(prev, profile);
+      currentPrescription = nextState.prescriptions.find((item) => item.date === today()) ?? null;
       return nextState;
     });
 
     setIsGeneratingAi(true);
-    try {
-      const feedback = await fetchSetupFeedback(profile);
-      setState((prev) => prev.user ? { ...prev, user: { ...prev.user, setupFeedback: feedback } } : prev);
-      const currentPrescription = nextState.prescriptions.find((item) => item.date === today());
-      if (currentPrescription) {
-        const coachInsight = await fetchDailyCoachInsight(
-          { ...nextState, user: { ...profile, setupFeedback: feedback } },
-          currentPrescription
-        );
-        setState((prev) => ({
-          ...prev,
-          prescriptions: prev.prescriptions.map((item) => item.date === currentPrescription.date ? { ...item, coachInsight } : item)
-        }));
+    void (async () => {
+      try {
+        const feedback = await fetchSetupFeedback(profile);
+        setState((prev) => prev.user ? { ...prev, user: { ...prev.user, setupFeedback: feedback } } : prev);
+
+        if (currentPrescription) {
+          const coachInsight = await fetchDailyCoachInsight(
+            { ...nextState, user: { ...profile, setupFeedback: feedback } },
+            currentPrescription
+          );
+          setState((prev) => ({
+            ...prev,
+            prescriptions: prev.prescriptions.map((item) => item.date === currentPrescription?.date ? { ...item, coachInsight } : item)
+          }));
+        }
+      } catch (error) {
+        setAiError(error instanceof Error ? error.message : 'AI生成に失敗しました。');
+      } finally {
+        setIsGeneratingAi(false);
       }
-    } catch (error) {
-      setAiError(error instanceof Error ? error.message : 'AI生成に失敗しました。');
-    } finally {
-      setIsGeneratingAi(false);
-    }
+    })();
   };
 
   const saveLog = async (log: DailyLog) => {
     setAiError(null);
     let nextState = emptyAppState;
     let currentPrescription: Prescription | null = null;
+
     setState((prev) => {
       nextState = buildStateAfterLog(prev, log);
       currentPrescription = nextState.prescriptions.find((item) => item.date === today()) ?? null;
@@ -142,17 +148,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (!nextState.user || !currentPrescription) return;
 
     setIsGeneratingAi(true);
-    try {
-      const coachInsight = await fetchDailyCoachInsight(nextState, currentPrescription);
-      setState((prev) => ({
-        ...prev,
-        prescriptions: prev.prescriptions.map((item) => item.date === currentPrescription?.date ? { ...item, coachInsight } : item)
-      }));
-    } catch (error) {
-      setAiError(error instanceof Error ? error.message : 'AI生成に失敗しました。');
-    } finally {
-      setIsGeneratingAi(false);
-    }
+    void (async () => {
+      try {
+        const coachInsight = await fetchDailyCoachInsight(nextState, currentPrescription as Prescription);
+        setState((prev) => ({
+          ...prev,
+          prescriptions: prev.prescriptions.map((item) => item.date === currentPrescription?.date ? { ...item, coachInsight } : item)
+        }));
+      } catch (error) {
+        setAiError(error instanceof Error ? error.message : 'AI生成に失敗しました。');
+      } finally {
+        setIsGeneratingAi(false);
+      }
+    })();
   };
 
   const loadDemo = () => {
