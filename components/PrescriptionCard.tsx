@@ -17,14 +17,14 @@ function SourceBadge({ generatedBy, model }: { generatedBy: string; model?: stri
 
 export function PrescriptionCard({ prescription, compact = false }: { prescription: Prescription; compact?: boolean }) {
   const coachInsight: CoachInsight = {
-    overall: '',
-    dinner: '',
-    workout: '',
-    recovery: '',
-    actionItems: [],
-    warnings: [],
-    generatedBy: 'rule-based',
-    ...(prescription.coachInsight ?? {})
+    overall: prescription.coachInsight?.overall ?? '',
+    dinner: prescription.coachInsight?.dinner ?? '',
+    workout: prescription.coachInsight?.workout ?? '',
+    recovery: prescription.coachInsight?.recovery ?? '',
+    actionItems: prescription.coachInsight?.actionItems ?? [],
+    warnings: prescription.coachInsight?.warnings ?? [],
+    generatedBy: prescription.coachInsight?.generatedBy ?? 'rule-based',
+    model: prescription.coachInsight?.model
   };
 
   return (
